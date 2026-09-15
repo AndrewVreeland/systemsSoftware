@@ -55,17 +55,53 @@ int main(int argc, char *argv[])
     return 1;
     }
 
-    while(fscanf(fp, "%d", &instructionValue) == 1)
+    while (fscanf(fp, "%d %d %d", &op, &l, &m) == 3)
     {
-        
-        arr[programCounter] = instructionValue;
-        programCounter +=1;
+        if(pc >= 1000){
+            printf("Error: program counter left the text segment\n");
+    fclose(fp);
+    return 1;
+        }
+        pas[pc] = op;
+        pas[pc + 1] = l;
+        pas[pc + 2] = m;
+        pc += 3;
 
+        //logic for OP,l,m !!!!
+        switch(op){
+            case 1:
+
+            case 2:
+                switch(m){
+//create the 11 M
+                }
+            case 3:
+
+            case 4:
+
+            case 5: 
+
+            case 6:
+
+            case 7:
+
+            case 8:
+
+            case 9:
+                switch(m){
+                    case 1:
+//create the 3 M
+                    case 2:
+
+                    case 3:
+                    
+                }
+        }
     }
     
     fclose(fp);
 
-    int numberOfInstructions = (programCounter - 200) / 3;
+    
 
 
 
