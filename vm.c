@@ -1,30 +1,40 @@
 /*
 Assignment:
 vm - HW1 PM/0 virtual machine
+
 Author: <Andrew Vreeland> <Graham Wilson>
+
 Language: C only
+
 To Compile:
-gcc -Wall -Wextra -std=c11 -O2 vm.c -o vm
+  gcc -Wall -Wextra -std=c11 -O2 vm.c -o vm
+
 To Execute (on Eustis):
-./vm <input_file>
+  ./vm <input_file>
+
 where:
-<input_file> is the path to a text file holding one PM/0 instruction
-per line, as three integers OP L M
+  <input_file> is the path to a text file holding one PM/0 instruction
+               per line, as three integers OP L M
+
 Notes:
-- Implements the PM/0 virtual machine described in the homework
-instructions.
-- No heap allocation and no function-like macros. The PAS array is
-indexed, not walked with a pointer.
-- Does not implement any VM instruction as a separate function; the
-fetch-execute cycle runs directly in main.
-- Defines at most three functions: main, base, and one print function.
-- Exits with status 0 after a normal halt and with a non-zero status
-after any error.
-- Tested on Eustis.
+  - Implements the PM/0 virtual machine described in the homework
+    instructions.
+  - No heap allocation and no function-like macros. The PAS array is
+    indexed, not walked with a pointer.
+  - Does not implement any VM instruction as a separate function; the
+    fetch-execute cycle runs directly in main.
+  - Defines at most three functions: main, base, and one print function.
+  - Exits with status 0 after a normal halt and with a non-zero status
+    after any error.
+  - Tested on Eustis.
+
 Class: COP 3402 - Systems Software
+
 Instructor: Jie Lin, Ph.D.
+
 Due Date: See Webcourses
 */
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -46,7 +56,8 @@ int m;
 int base(int basePoint, int L)
 {
     int arb = basePoint;
-    while (L > 0) {
+    while (L > 0)
+    {
         arb = arr[arb];
         L--;
     }
@@ -57,10 +68,13 @@ int base(int basePoint, int L)
 void printStack(void)
 {
     int i, j;
-    for (i = STACK_TOP; i >= stackPointer; i--) {
+    for (i = STACK_TOP; i >= stackPointer; i--)
+    {
         // walk dynamic links for bases
-        for (j = basePointer; j != STACK_TOP && j > TEXT_START; j = arr[j - 1]) {
-            if (j == i) {
+        for (j = basePointer; j != STACK_TOP && j > TEXT_START; j = arr[j - 1])
+        {
+            if (j == i)
+            {
                 printf("| ");
                 break;
             }
@@ -78,25 +92,30 @@ int main(int argc, char *argv[])
                                "NEQ", "LSS", "LEQ", "GTR", "GEQ" };
     const char *name = "";
     const char *err = NULL;
+    
     int loadAddr = TEXT_START;
     int halted = 0;
     int a, b, addr;
     FILE *fp;
 
-    if (argc != 2) {
+    if (argc != 2)
+    {
         printf("Usage: ./vm <input file>\n");
         return 1;
     }
 
     fp = fopen(argv[1], "r");
-    if (fp == NULL) {
+    if (fp == NULL)
+    {
         printf("Error: cannot open %s\n", argv[1]);
         return 1;
     }
 
     // load text segment from file
-    while (fscanf(fp, "%d %d %d", &op, &l, &m) == 3) {
-        if (loadAddr + 2 > STACK_TOP) {
+    while (fscanf(fp, "%d %d %d", &op, &l, &m) == 3)
+    {
+        if (loadAddr + 2 > STACK_TOP)
+        {
             printf("\nError: program too large for the text segment\n");
             fclose(fp);
             return 1;
@@ -110,13 +129,14 @@ int main(int argc, char *argv[])
     lastCodeAddr = loadAddr - 1;
 
     printf("\tL\tM\tPC\tBP\tSP\tstack\n");
-    printf("Initial values:\t\t\t%d\t%d\t%d\n",
-           programCounter, basePointer, stackPointer);
+    printf("Initial values:\t\t\t%d\t%d\t%d\n", programCounter, basePointer, stackPointer);
 
     // fetch-execute cycle
-    while (!halted) {
+    while (!halted)
+    {
         // fetch: PC must be inside text
-        if (programCounter < TEXT_START || programCounter + 2 > lastCodeAddr) {
+        if (programCounter < TEXT_START || programCounter + 2 > lastCodeAddr)
+        {
             err = "program counter left the text segment";
             goto fail;
         }
@@ -128,10 +148,12 @@ int main(int argc, char *argv[])
         programCounter += 3;
 
         // execute
-        switch (op) {
+        switch (op)
+        {
         case 1: // LIT
             name = names[op];
-            if (stackPointer - 1 <= lastCodeAddr) {
+            if (stackPointer - 1 <= lastCodeAddr)
+            {
                 err = "stack overflow";
                 goto fail;
             }
@@ -140,12 +162,14 @@ int main(int argc, char *argv[])
             break;
 
         case 2: // OPR
-            if (m < 0 || m > 10) {
+            if (m < 0 || m > 10)
+            {
                 err = "unknown OPR sub-operation";
                 goto fail;
             }
             name = oprNames[m];
-            if (m == 0) { // RTN
+            if (m == 0) // RTN
+            {
                 stackPointer = basePointer + 1;
                 basePointer = arr[stackPointer - 2];
                 programCounter = arr[stackPointer - 3];
@@ -153,12 +177,14 @@ int main(int argc, char *argv[])
             }
             a = arr[stackPointer + 1];
             b = arr[stackPointer];
-            if (m == 4 && b == 0) {
+            if (m == 4 && b == 0)
+            {
                 err = "division by zero";
                 goto fail;
             }
             stackPointer++;
-            switch (m) {
+            switch (m)
+            {
             case 1: arr[stackPointer] = a + b; break;
             case 2: arr[stackPointer] = a - b; break;
             case 3: arr[stackPointer] = a * b; break;
@@ -172,14 +198,16 @@ int main(int argc, char *argv[])
             }
             break;
 
-        case 3: // LOD
+        case 3: // LOD !!! loads value from memory !!! 
             name = names[op];
             addr = base(basePointer, l) - m;
-            if (addr <= lastCodeAddr || addr > STACK_TOP) {
+            if (addr <= lastCodeAddr || addr > STACK_TOP) 
+            {
                 err = "data address out of range";
                 goto fail;
             }
-            if (stackPointer - 1 <= lastCodeAddr) {
+            if (stackPointer - 1 <= lastCodeAddr) 
+            {
                 err = "stack overflow";
                 goto fail;
             }
@@ -187,10 +215,11 @@ int main(int argc, char *argv[])
             arr[stackPointer] = arr[addr];
             break;
 
-        case 4: // STO
+        case 4: // STO !!! stores value !!! 
             name = names[op];
             addr = base(basePointer, l) - m;
-            if (addr <= lastCodeAddr || addr > STACK_TOP) {
+            if (addr <= lastCodeAddr || addr > STACK_TOP)
+            {
                 err = "data address out of range";
                 goto fail;
             }
@@ -198,7 +227,7 @@ int main(int argc, char *argv[])
             stackPointer++;
             break;
 
-        case 5: // CAL
+        case 5: // !!! CAL builds new activation records !!!
             name = names[op];
             arr[stackPointer - 1] = base(basePointer, l); // static link
             arr[stackPointer - 2] = basePointer;          // dynamic link
@@ -207,30 +236,34 @@ int main(int argc, char *argv[])
             programCounter = m;
             break;
 
-        case 6: // INC
+        case 6: // INC !!! allocates M words and moves SP down !!! 
             name = names[op];
-            if (stackPointer - m <= lastCodeAddr) {
+            if (stackPointer - m <= lastCodeAddr) 
+            {
                 err = "stack overflow";
                 goto fail;
             }
             stackPointer -= m;
             break;
 
-        case 7: // JMP
+        case 7: // JMP !!! jumps to new address !!!
             name = names[op];
             programCounter = m;
             break;
 
-        case 8: // JPC
+        case 8: // JPC !!! jumps if popped value is 0 !!!
             name = names[op];
             if (arr[stackPointer] == 0)
+            {
                 programCounter = m;
+            }
             stackPointer++; // pop either way
             break;
 
-        case 9: // SYS
+        case 9: // SYS !!! main program decisions !!! 
             name = names[op];
-            switch (m) {
+            switch (m)
+            {
             case 1: // write
                 printf("Output result is: %d\n", arr[stackPointer]);
                 stackPointer++;
@@ -238,7 +271,9 @@ int main(int argc, char *argv[])
             case 2: // read
                 printf("Please Enter an Integer: ");
                 if (scanf("%d", &a) != 1)
+                {
                     a = 0;
+                }
                 printf("%d\n", a);
                 stackPointer--;
                 arr[stackPointer] = a;
