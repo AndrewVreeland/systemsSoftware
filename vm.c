@@ -1,4 +1,3 @@
-
 /*
 Assignment:
 vm - HW1 PM/0 virtual machine
@@ -18,7 +17,6 @@ instructions.
 indexed, not walked with a pointer.
 - Does not implement any VM instruction as a separate function; the
 fetch-execute cycle runs directly in main.
-13
 - Defines at most three functions: main, base, and one print function.
 - Exits with status 0 after a normal halt and with a non-zero status
 after any error.
@@ -28,95 +26,246 @@ Instructor: Jie Lin, Ph.D.
 Due Date: See Webcourses
 */
 
-#include <stdlib.h>
 #include <stdio.h>
-#include <stdbool.h>
+#include <stdlib.h>
 
+#define PAS_SIZE 1000
+#define TEXT_START 200
+#define STACK_TOP 999
 
-
-int arr[1000];
-int programCounter = 200;
-int basePointer = 999; 
+int arr[PAS_SIZE];
+int programCounter = TEXT_START;
+int basePointer = STACK_TOP;
 int stackPointer = 1000;
+int lastCodeAddr;
 int op;
 int l;
 int m;
 
-
-
-int main(int argc, char *argv[])
-{
-
-    int instructionValue;
-
-    FILE *fp = fopen(argv[1], "file");
-    if (fp == NULL) {
-    printf("Error: cannot open %s\n", argv[1]);
-    return 1;
-    }
-
-    while (fscanf(fp, "%d %d %d", &op, &l, &m) == 3)
-    {
-        if(pc >= 1000){
-            printf("Error: program counter left the text segment\n");
-    fclose(fp);
-    return 1;
-        }
-        pas[pc] = op;
-        pas[pc + 1] = l;
-        pas[pc + 2] = m;
-        pc += 3;
-
-        //logic for OP,l,m !!!!
-        switch(op){
-            case 1:
-
-            case 2:
-                switch(m){
-//create the 11 M
-                }
-            case 3:
-
-            case 4:
-
-            case 5: 
-
-            case 6:
-
-            case 7:
-
-            case 8:
-
-            case 9:
-                switch(m){
-                    case 1:
-//create the 3 M
-                    case 2:
-
-                    case 3:
-                    
-                }
-        }
-    }
-    
-    fclose(fp);
-
-    
-
-
-
-    
-
-    return 0;
-}
-
 // helper function
 int base(int basePoint, int L)
 {
-int arb = basePoint;
-while (L > 0) {
-arb = arr[arb];
-L--;
+    int arb = basePoint;
+    while (L > 0) {
+        arb = arr[arb];
+        L--;
+    }
+    return arb;
 }
-return arb;
+
+// prints stack, bar before each record
+void printStack(void)
+{
+    int i, j;
+    for (i = STACK_TOP; i >= stackPointer; i--) {
+        // walk dynamic links for bases
+        for (j = basePointer; j != STACK_TOP && j > TEXT_START; j = arr[j - 1]) {
+            if (j == i) {
+                printf("| ");
+                break;
+            }
+        }
+        printf("%d ", arr[i]);
+    }
+    printf("\n");
+}
+
+int main(int argc, char *argv[])
+{
+    const char *names[] = { "", "LIT", "OPR", "LOD", "STO",
+                            "CAL", "INC", "JMP", "JPC", "SYS" };
+    const char *oprNames[] = { "RTN", "ADD", "SUB", "MUL", "DIV", "EQL",
+                               "NEQ", "LSS", "LEQ", "GTR", "GEQ" };
+    const char *name = "";
+    const char *err = NULL;
+    int loadAddr = TEXT_START;
+    int halted = 0;
+    int a, b, addr;
+    FILE *fp;
+
+    if (argc != 2) {
+        printf("Usage: ./vm <input file>\n");
+        return 1;
+    }
+
+    fp = fopen(argv[1], "r");
+    if (fp == NULL) {
+        printf("Error: cannot open %s\n", argv[1]);
+        return 1;
+    }
+
+    // load text segment from file
+    while (fscanf(fp, "%d %d %d", &op, &l, &m) == 3) {
+        if (loadAddr + 2 > STACK_TOP) {
+            printf("\nError: program too large for the text segment\n");
+            fclose(fp);
+            return 1;
+        }
+        arr[loadAddr] = op;
+        arr[loadAddr + 1] = l;
+        arr[loadAddr + 2] = m;
+        loadAddr += 3;
+    }
+    fclose(fp);
+    lastCodeAddr = loadAddr - 1;
+
+    printf("\tL\tM\tPC\tBP\tSP\tstack\n");
+    printf("Initial values:\t\t\t%d\t%d\t%d\n",
+           programCounter, basePointer, stackPointer);
+
+    // fetch-execute cycle
+    while (!halted) {
+        // fetch: PC must be inside text
+        if (programCounter < TEXT_START || programCounter + 2 > lastCodeAddr) {
+            err = "program counter left the text segment";
+            goto fail;
+        }
+        op = arr[programCounter];
+        l = arr[programCounter + 1];
+        m = arr[programCounter + 2];
+
+        // advance before executing
+        programCounter += 3;
+
+        // execute
+        switch (op) {
+        case 1: // LIT
+            name = names[op];
+            if (stackPointer - 1 <= lastCodeAddr) {
+                err = "stack overflow";
+                goto fail;
+            }
+            stackPointer--;
+            arr[stackPointer] = m;
+            break;
+
+        case 2: // OPR
+            if (m < 0 || m > 10) {
+                err = "unknown OPR sub-operation";
+                goto fail;
+            }
+            name = oprNames[m];
+            if (m == 0) { // RTN
+                stackPointer = basePointer + 1;
+                basePointer = arr[stackPointer - 2];
+                programCounter = arr[stackPointer - 3];
+                break;
+            }
+            a = arr[stackPointer + 1];
+            b = arr[stackPointer];
+            if (m == 4 && b == 0) {
+                err = "division by zero";
+                goto fail;
+            }
+            stackPointer++;
+            switch (m) {
+            case 1: arr[stackPointer] = a + b; break;
+            case 2: arr[stackPointer] = a - b; break;
+            case 3: arr[stackPointer] = a * b; break;
+            case 4: arr[stackPointer] = a / b; break;
+            case 5: arr[stackPointer] = (a == b); break;
+            case 6: arr[stackPointer] = (a != b); break;
+            case 7: arr[stackPointer] = (a < b); break;
+            case 8: arr[stackPointer] = (a <= b); break;
+            case 9: arr[stackPointer] = (a > b); break;
+            case 10: arr[stackPointer] = (a >= b); break;
+            }
+            break;
+
+        case 3: // LOD
+            name = names[op];
+            addr = base(basePointer, l) - m;
+            if (addr <= lastCodeAddr || addr > STACK_TOP) {
+                err = "data address out of range";
+                goto fail;
+            }
+            if (stackPointer - 1 <= lastCodeAddr) {
+                err = "stack overflow";
+                goto fail;
+            }
+            stackPointer--;
+            arr[stackPointer] = arr[addr];
+            break;
+
+        case 4: // STO
+            name = names[op];
+            addr = base(basePointer, l) - m;
+            if (addr <= lastCodeAddr || addr > STACK_TOP) {
+                err = "data address out of range";
+                goto fail;
+            }
+            arr[addr] = arr[stackPointer];
+            stackPointer++;
+            break;
+
+        case 5: // CAL
+            name = names[op];
+            arr[stackPointer - 1] = base(basePointer, l); // static link
+            arr[stackPointer - 2] = basePointer;          // dynamic link
+            arr[stackPointer - 3] = programCounter;       // return address
+            basePointer = stackPointer - 1;
+            programCounter = m;
+            break;
+
+        case 6: // INC
+            name = names[op];
+            if (stackPointer - m <= lastCodeAddr) {
+                err = "stack overflow";
+                goto fail;
+            }
+            stackPointer -= m;
+            break;
+
+        case 7: // JMP
+            name = names[op];
+            programCounter = m;
+            break;
+
+        case 8: // JPC
+            name = names[op];
+            if (arr[stackPointer] == 0)
+                programCounter = m;
+            stackPointer++; // pop either way
+            break;
+
+        case 9: // SYS
+            name = names[op];
+            switch (m) {
+            case 1: // write
+                printf("Output result is: %d\n", arr[stackPointer]);
+                stackPointer++;
+                break;
+            case 2: // read
+                printf("Please Enter an Integer: ");
+                if (scanf("%d", &a) != 1)
+                    a = 0;
+                printf("%d\n", a);
+                stackPointer--;
+                arr[stackPointer] = a;
+                break;
+            case 3: // halt
+                halted = 1;
+                break;
+            default:
+                err = "unknown SYS operation";
+                goto fail;
+            }
+            break;
+
+        default:
+            err = "unknown opcode";
+            goto fail;
+        }
+
+        // trace line after execution
+        printf("%s\t%d\t%d\t%d\t%d\t%d\t",
+               name, l, m, programCounter, basePointer, stackPointer);
+        printStack();
+    }
+
+    return 0;
+
+fail:
+    printf("\nError: %s\n", err);
+    return 1;
 }
