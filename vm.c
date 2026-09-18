@@ -176,7 +176,7 @@ int main(int argc, char *argv[])
             name = names[op];
             addr = base(basePointer, l) - m;
             if (addr <= lastCodeAddr || addr > STACK_TOP) {
-                printf("\Error: data address out of range\n");
+                printf("\nError: data address out of range\n");
                 return 1;
             }
             if (stackPointer - 1 <= lastCodeAddr) {
