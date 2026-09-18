@@ -1,7 +1,7 @@
 /*
 Assignment:
 vm - HW1 PM/0 virtual machine
-Author: <Andrew Vreeland> <Graham Wilson>
+Author: Andrew Vreeland and Graham Wilson
 Language: C only
 To Compile:
 gcc -Wall -Wextra -std=c11 -O2 vm.c -o vm
@@ -42,7 +42,7 @@ int op;
 int l;
 int m;
 
-// helper function
+// provided helper function
 int base(int basePoint, int L)
 {
     int arb = basePoint;
@@ -115,10 +115,10 @@ int main(int argc, char *argv[])
 
     // fetch-execute cycle
     while (!halted) {
-        // fetch: PC must be inside text
+        // fetch the instruction (OP,L,M) from the PAS text
         if (programCounter < TEXT_START || programCounter + 2 > lastCodeAddr) {
-            err = "program counter left the text segment";
-            goto fail;
+            printf("\nError: program counter left the text segment\n");
+            return 1;
         }
         op = arr[programCounter];
         l = arr[programCounter + 1];
@@ -127,13 +127,13 @@ int main(int argc, char *argv[])
         // advance before executing
         programCounter += 3;
 
-        // execute
+        // execite the instruction
         switch (op) {
         case 1: // LIT
             name = names[op];
             if (stackPointer - 1 <= lastCodeAddr) {
-                err = "stack overflow";
-                goto fail;
+                printf("\nError: stack overflow\n");
+                return 1;
             }
             stackPointer--;
             arr[stackPointer] = m;
@@ -141,11 +141,11 @@ int main(int argc, char *argv[])
 
         case 2: // OPR
             if (m < 0 || m > 10) {
-                err = "unknown OPR sub-operation";
-                goto fail;
+                printf("\nError: unknown OPR sub-operation\n");
+                return 1;
             }
             name = oprNames[m];
-            if (m == 0) { // RTN
+            if (m == 0) { // RTN: restor the callers stack frame and return the PC
                 stackPointer = basePointer + 1;
                 basePointer = arr[stackPointer - 2];
                 programCounter = arr[stackPointer - 3];
@@ -154,8 +154,8 @@ int main(int argc, char *argv[])
             a = arr[stackPointer + 1];
             b = arr[stackPointer];
             if (m == 4 && b == 0) {
-                err = "division by zero";
-                goto fail;
+                printf("\nError: division by zero\n");
+                return 1;
             }
             stackPointer++;
             switch (m) {
@@ -176,12 +176,12 @@ int main(int argc, char *argv[])
             name = names[op];
             addr = base(basePointer, l) - m;
             if (addr <= lastCodeAddr || addr > STACK_TOP) {
-                err = "data address out of range";
-                goto fail;
+                printf("\Error: data address out of range\n");
+                return 1;
             }
             if (stackPointer - 1 <= lastCodeAddr) {
-                err = "stack overflow";
-                goto fail;
+                printf("\nError: stack overflow\n");
+                return 1;
             }
             stackPointer--;
             arr[stackPointer] = arr[addr];
@@ -191,27 +191,31 @@ int main(int argc, char *argv[])
             name = names[op];
             addr = base(basePointer, l) - m;
             if (addr <= lastCodeAddr || addr > STACK_TOP) {
-                err = "data address out of range";
-                goto fail;
+                printf("\nError: data address out of range\n");
+                return 1;
             }
             arr[addr] = arr[stackPointer];
             stackPointer++;
             break;
 
-        case 5: // CAL
+        case 5: // CAL: pushes the static and dynamic link and the return address
             name = names[op];
+            if (stackPointer - 3 <= lastCodeAddr) {
+            printf("\nError: stack overflow\n");
+            return 1;
+            }
             arr[stackPointer - 1] = base(basePointer, l); // static link
             arr[stackPointer - 2] = basePointer;          // dynamic link
             arr[stackPointer - 3] = programCounter;       // return address
             basePointer = stackPointer - 1;
-            programCounter = m;
+            programCounter = m; //jump to the address m
             break;
 
         case 6: // INC
             name = names[op];
             if (stackPointer - m <= lastCodeAddr) {
-                err = "stack overflow";
-                goto fail;
+                printf("\nError: stack overflow\n");
+                return 1;
             }
             stackPointer -= m;
             break;
@@ -221,7 +225,7 @@ int main(int argc, char *argv[])
             programCounter = m;
             break;
 
-        case 8: // JPC
+        case 8: // JPC: conditional jump
             name = names[op];
             if (arr[stackPointer] == 0)
                 programCounter = m;
@@ -247,17 +251,17 @@ int main(int argc, char *argv[])
                 halted = 1;
                 break;
             default:
-                err = "unknown SYS operation";
-                goto fail;
+                printf("\nError: unknown SYS operation\n");
+                return 1;
             }
             break;
 
         default:
-            err = "unknown opcode";
-            goto fail;
+            printf("\nError: unknown opcode\n");
+            return 1;
         }
 
-        // trace line after execution
+        // trace line after execution, prints nmenonic, registers, and current stack contents
         printf("%s\t%d\t%d\t%d\t%d\t%d\t",
                name, l, m, programCounter, basePointer, stackPointer);
         printStack();
@@ -265,7 +269,5 @@ int main(int argc, char *argv[])
 
     return 0;
 
-fail:
-    printf("\nError: %s\n", err);
-    return 1;
+
 }
