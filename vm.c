@@ -227,8 +227,9 @@ int main(int argc, char *argv[])
 
         case 8: // JPC: conditional jump
             name = names[op];
-            if (arr[stackPointer] == 0)
+            if (arr[stackPointer] == 0){
                 programCounter = m;
+            }
             stackPointer++; // pop either way
             break;
 
@@ -241,8 +242,9 @@ int main(int argc, char *argv[])
                 break;
             case 2: // read
                 printf("Please Enter an Integer: ");
-                if (scanf("%d", &a) != 1)
+                if (scanf("%d", &a) != 1){
                     a = 0;
+                }
                 printf("%d\n", a);
                 stackPointer--;
                 arr[stackPointer] = a;
