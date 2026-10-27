@@ -77,7 +77,6 @@ int main(int argc, char *argv[])
     const char *oprNames[] = { "RTN", "ADD", "SUB", "MUL", "DIV", "EQL",
                                "NEQ", "LSS", "LEQ", "GTR", "GEQ" };
     const char *name = "";
-    const char *err = NULL;
     int loadAddr = TEXT_START;
     int halted = 0;
     int a, b, addr;
